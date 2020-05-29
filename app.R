@@ -1,8 +1,4 @@
 ### notes
-## Can do:Put in table (not the updated one yet), and filter it based on datatype, platform, project, cohort, sex and age
-## Can not do yet: Mouse stuff, sorting dataframe by columns based on stuff clicked at in pop up window 
-#(popup is working but just not functional yet). Also, Red button is not implemented since it actually is nice if df updates 
-#with every updated filter selection
 
 library(shiny)
 library(DT)
@@ -12,12 +8,26 @@ library(dplyr)
 
 # Define UI ----
 
-MyDat <- read.csv("~/Hackathon/ExampleData.csv")
+Human <- read.csv("~/Hackathon/HackathonHUMAN.csv")
 Human <- MyDat[MyDat$Species == "Human",]
 
 
 ui <- fluidPage(
-  titlePanel(h1("Complex Disease Epigenetics Group Database", align = "center")),
+  titlePanel(p(column(2,img(src = "Exeter.png", height = 100)),
+               column(8,h1("Complex Disease Epigenetics Group Database", align = "center")),
+               column(2,p(img(src = "CDEG.png", height = 100)),
+                      p(actionButton("UploadPopup", "Upload Data",
+                                     style="color: #000000; background-color: #8bbbee; border-color: #000000"), 
+                        align = "right")),
+               bsModal("UploadModal","Upload new Data into Database","UploadPopup",
+                       h3("Upload Human Data"),
+                       h5(helpText("Please refer to the Upload Guidelines: humandataguideline.onlinething.ac.uk")),
+                       fileInput("UploadHuman", h5("Choose CSV File"), multiple = FALSE, 
+                                 accept = c("text/csv", "text/comma-separated-values,text/plain", ".csv")),
+                       h3("Upload Mouse Data"),
+                       h5(helpText("Please refer to the Upload Guidelines: mousedataguideline.onlinething.ac.uk")),
+                       fileInput("UploadMouse", h5("Choose CSV File"), multiple = FALSE, 
+                                 accept = c("text/csv", "text/comma-separated-values,text/plain", ".csv"))))),
   tabsetPanel(
     tabPanel("Human Data",
       sidebarLayout(
@@ -61,7 +71,14 @@ ui <- fluidPage(
         mainPanel(
           column(11,
                  br(),
-                 DT::dataTableOutput("data", width = 850)       
+                 DT::dataTableOutput("data", width = 850) , 
+                 br(),
+                 h2("Plots"),
+                 helpText("Select Variables for Plotting"),
+                 p(column(3,selectInput("hX","X-axis",choices = sort(names(Human)))),
+                   column(3,selectInput("hY","Y-axis",choices = sort(names(Human))))),
+
+                 plotOutput("myplot", width = 850)
           ),
           column(1,
                  br(),
@@ -112,6 +129,13 @@ server <- function(input, output) {
   output$data <- DT::renderDataTable({
     DT::datatable(df()[, input$hColumn, drop = FALSE], options = list(scrollX = TRUE))
   })
+  output$myplot <- 
+    renderPlot({if(is.numeric(input$hX) == "TRUE"){
+      boxplot(get(input$hY) ~ get(input$hX) , data=Human)
+    }else{
+      plot(get(input$hY) ~ get(input$hX) , data=Human)
+    }
+    })
 
   { "example second tab" }
 }
